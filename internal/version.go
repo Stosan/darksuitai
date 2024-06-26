@@ -18,7 +18,7 @@ func (d *darkSuitAgentImpl) WakeDarkSuitAgent() func() {
 
 func _wakeDarkSuitAgent(agentName string) func() {
 
-	agentName = "Clive"
+	agentName = "Sam Ayo"
 
 	return func() {
 		if !isExecuted {
