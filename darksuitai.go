@@ -1,9 +1,9 @@
 package darksuitai
 
 import (
-	"github.com/clive-alliance/darksuitai/internal/prompts"
-	"github.com/clive-alliance/darksuitai/pkg/ai"
-	"github.com/clive-alliance/darksuitai/types"
+	"github.com/Stosan/darksuitai/internal/prompts"
+	"github.com/Stosan/darksuitai/pkg/ai"
+	"github.com/Stosan/darksuitai/types"
 )
 
 // DarkSuitAI is the main struct that users will interact with
