@@ -165,6 +165,7 @@ func (cargs *ChatLLMArgs) NewConvLLM() (*ConvLLM, error) {
 	// Call the dark suit callback
 	darkSuitCallback := darkSuitAgent.WakeDarkSuitAgent()
 	darkSuitCallback()
+
 	return &ConvLLM{
 		convai: convai.ConvAI{
 			ChatInstruction: cargs.ChatInstruction,
