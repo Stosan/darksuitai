@@ -1,10 +1,16 @@
 package darksuitai
 
 import (
+	"github.com/Stosan/darksuitai/internal"
 	"github.com/Stosan/darksuitai/internal/prompts"
 	"github.com/Stosan/darksuitai/pkg/ai"
+	"github.com/Stosan/darksuitai/pkg/convai"
 	"github.com/Stosan/darksuitai/types"
+	"go.mongodb.org/mongo-driver/mongo"
 )
+
+// Create an instance of the DarkSuitAgent interface
+var darkSuitAgent internal.DarkSuitAgent = internal.NewDarkSuitAgent()
 
 // DarkSuitAI is the main struct that users will interact with
 type ChatLLMArgs types.ChatLLMArgs
@@ -17,7 +23,7 @@ func NewChatLLMArgs() *ChatLLMArgs {
 		PromptKeys:      make(map[string][]byte),
 		ModelType:       make(map[string]string),
 		ModelKwargs: []struct {
-			MaxTokens     int    `json:"max_tokens"`
+			MaxTokens     int      `json:"max_tokens"`
 			Temperature   float64  `json:"temperature"`
 			Stream        bool     `json:"stream"`
 			StopSequences []string `json:"stop_sequences"`
@@ -86,6 +92,24 @@ func (args *ChatLLMArgs) SetModelType(key, value string) {
 }
 
 /*
+	SetMongoDBCollection sets the MongoDB collection in ChatLLMArgs.
+
+This method allows you to specify the MongoDB collection that will be used for storing and retrieving chat-related data.
+
+Example:
+
+args := darksuitAI.NewChatLLMArgs()
+
+args.SetMongoDBCollection(mongoCollection)
+
+In this example, the MongoDB collection is set, which will be used for chat data operations.
+*/
+func (args *ChatLLMArgs) SetMongoDBCollection(collection *mongo.Database) {
+	args.MongoDB = collection
+}
+
+
+/*
 	AddModelKwargs adds a new set of model arguments to the ModelKwargs slice in ChatLLMArgs.
 
 This method allows you to specify various parameters for the model's behavior.
@@ -100,7 +124,7 @@ In this example, the model arguments are set with a maximum of 1500 tokens, a te
 */
 func (args *ChatLLMArgs) AddModelKwargs(maxTokens int, temperature float64, stream bool, stopSequences []string) {
 	args.ModelKwargs = append(args.ModelKwargs, struct {
-		MaxTokens     int    `json:"max_tokens"`
+		MaxTokens     int      `json:"max_tokens"`
 		Temperature   float64  `json:"temperature"`
 		Stream        bool     `json:"stream"`
 		StopSequences []string `json:"stop_sequences"`
@@ -116,14 +140,37 @@ type LLM struct {
 	ai ai.AI
 }
 
+type ConvLLM struct {
+	convai convai.ConvAI
+}
+
 // NewLLM creates a new instance of DarkSuitAI LLM
 func (cargs *ChatLLMArgs) NewLLM() (*LLM, error) {
 
+	// Call the dark suit callback
+	darkSuitCallback := darkSuitAgent.WakeDarkSuitAgent()
+	darkSuitCallback()
 	return &LLM{
 		ai: ai.AI{
 			ChatInstruction: cargs.ChatInstruction,
 			PromptKeys:      cargs.PromptKeys,
 			ModelType:       cargs.ModelType,
+			ModelKwargs:     cargs.ModelKwargs,
+		},
+	}, nil
+}
+
+// NewConvLLM creates a new instance of DarkSuitAI LLM
+func (cargs *ChatLLMArgs) NewConvLLM() (*ConvLLM, error) {
+	// Call the dark suit callback
+	darkSuitCallback := darkSuitAgent.WakeDarkSuitAgent()
+	darkSuitCallback()
+	return &ConvLLM{
+		convai: convai.ConvAI{
+			ChatInstruction: cargs.ChatInstruction,
+			PromptKeys:      cargs.PromptKeys,
+			ModelType:       cargs.ModelType,
+			MongoDB:         cargs.MongoDB,
 			ModelKwargs:     cargs.ModelKwargs,
 		},
 	}, nil
@@ -137,4 +184,14 @@ func (d *LLM) Chat(prompt string) (string, error) {
 // Stream LLM exposes the LLM method for chat stream
 func (d *LLM) Stream(prompt string) (string, error) {
 	return d.ai.Chat(prompt)
+}
+
+// Chat ConvLLM exposes the LLM method for conversational chat
+func (d *ConvLLM) Chat(prompt string) (string, error) {
+	return d.convai.Chat(prompt)
+}
+
+// Stream ConvLLM exposes the LLM method for conversational chat stream
+func (d *ConvLLM) Stream(prompt string) (string, error) {
+	return d.convai.Chat(prompt)
 }

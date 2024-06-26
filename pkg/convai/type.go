@@ -1,12 +1,12 @@
-package types
+package convai
 
 import "go.mongodb.org/mongo-driver/mongo"
 
-type ChatLLMArgs struct {
+type ConvAI struct {
 	ChatInstruction []byte
 	PromptKeys      map[string][]byte
 	ModelType       map[string]string
-	MongoDB         *mongo.Database
+	MongoDB              *mongo.Database
 	ModelKwargs     []struct {
 		MaxTokens     int      `json:"max_tokens"`
 		Temperature   float64  `json:"temperature"`
