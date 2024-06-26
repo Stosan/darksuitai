@@ -2,19 +2,19 @@
 
 ⚡ Blazing production-ready library for building scalable reasoning AI systems ✨
 
-[![Release Notes](https://img.shields.io/github/release/clive-alliance/darksuitai?style=flat-square)](https://github.com/clive-alliance/darksuitai/releases)
-[![CI](https://github.com/clive-alliance/darksuitai/actions/workflows/check_diffs.yml/badge.svg)](https://github.com/clive-alliance/darksuitai/actions/workflows/check_diffs.yml)
-[![GitHub star chart](https://img.shields.io/github/stars/clive-alliance/darksuitai?style=flat-square)](https://star-history.com/#clive-alliance/darksuitai)
-[![Open Issues](https://img.shields.io/github/issues-raw/clive-alliance/darksuitai?style=flat-square)](https://github.com/clive-alliance/darksuitai/issues)
-[![Open in Dev Containers](https://img.shields.io/static/v1?label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode&style=flat-square)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/clive-alliance/darksuitai)
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/clive-alliance/darksuitai)
+[![Release Notes](https://img.shields.io/github/release/Stosan/darksuitai?style=flat-square)](https://github.com/Stosan/darksuitai/releases)
+[![CI](https://github.com/Stosan/darksuitai/actions/workflows/check_diffs.yml/badge.svg)](https://github.com/Stosan/darksuitai/actions/workflows/check_diffs.yml)
+[![GitHub star chart](https://img.shields.io/github/stars/Stosan/darksuitai?style=flat-square)](https://star-history.com/#Stosan/darksuitai)
+[![Open Issues](https://img.shields.io/github/issues-raw/Stosan/darksuitai?style=flat-square)](https://github.com/Stosan/darksuitai/issues)
+[![Open in Dev Containers](https://img.shields.io/static/v1?label=Dev%20Containers&message=Open&color=blue&logo=visualstudiocode&style=flat-square)](https://vscode.dev/redirect?url=vscode://ms-vscode-remote.remote-containers/cloneInVolume?url=https://github.com/Stosan/darksuitai)
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/Stosan/darksuitai)
 
 
 
 ## Quick Install
 
 ```go
-go get guthub.com/clive-alliance/darksuitai@latest
+go get github.com/Stosan/darksuitai@latest
 ```
 
 
@@ -59,7 +59,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/clive-alliance/darksuitai"
+	"github.com/Stosan/darksuitai"
 )
 
 func main() {
@@ -67,7 +67,7 @@ func main() {
 	os.Setenv("OPENAI_API_KEY", "YOUR_API_KEY")
     os.Setenv("ANTHROPIC_API_KEY", "YOUR_API_KEY") // anthropic API key
 
-	args := darksuitAI.NewChatLLMArgs()
+	args := darksuitai.NewChatLLMArgs()
 
 	// args.SetChatInstruction([]byte(`Your chat instruction goes here`)) // uncomment to pass your own prompt instruction
 	args.AddPromptKey("year", []byte(`2024`)) // pass variables to your prompt
