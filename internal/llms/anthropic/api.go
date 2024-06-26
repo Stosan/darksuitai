@@ -1,17 +1,17 @@
-package openai
+package anthropic
 
-import "github.com/Stosan/darksuitai/internal/llms/openai/types"
+import "github.com/Stosan/darksuitai/internal/llms/anthropic/types"
 
 // ChatError represents a chat-related error.
 type ClientChatError struct {
 	error
 }
 
-type OAIChatArgs struct {
+type AnthChatArgs struct {
 	types.ChatArgs
 }
 
-func ChatOAI(kwargs ...map[string]interface{}) OAIChatArgs {
+func ChatAnth(kwargs ...map[string]interface{}) AnthChatArgs {
 	var args types.ChatArgs
 
 	for _, kwarg := range kwargs {
@@ -27,21 +27,21 @@ func ChatOAI(kwargs ...map[string]interface{}) OAIChatArgs {
 		if val, ok := kwarg["stream"]; ok {
 			args.Stream = val.(bool)
 		}
-		if val, ok := kwarg["stop"]; ok {
+		if val, ok := kwarg["stop_sequences"]; ok {
 			if stopVal, ok := val.([]string); ok {
-				args.Stop = stopVal
+				args.StopSequences = stopVal
 			} else if val == nil {
-				args.Stop = nil
+				args.StopSequences = nil
 			}
 		}
 
 		// ... other fields ...
 	}
-	return OAIChatArgs{args}
+	return AnthChatArgs{args}
 }
 
-// Chat sends a prompt to the chat client and returns the response.
-func (args OAIChatArgs) Chat(prompt string, assistant string) (string, error) {
+// ChatClient sends a prompt to the chat client and returns the response.
+func (args AnthChatArgs) Chat(prompt string, assistant string) (string, error) {
 	if args.ChatArgs.Messages == nil {
 		args.ChatArgs.Messages = make([]types.Message, 0)
 	}
@@ -60,9 +60,7 @@ func (args OAIChatArgs) Chat(prompt string, assistant string) (string, error) {
 	return response, err
 }
 
-// StreamCompleteChat sends a prompt to the stream complete chat client and returns the response.
-func (params OAIChatArgs) StreamCompleteChat(prompt string, system string) (string, error) {
-
+func (params AnthChatArgs) StreamCompleteChat(prompt string, system string) (string, error) {
 	if params.ChatArgs.Messages == nil {
 		params.ChatArgs.Messages = make([]types.Message, 0)
 	}
@@ -83,9 +81,8 @@ func (params OAIChatArgs) StreamCompleteChat(prompt string, system string) (stri
 	return response, err
 }
 
-// StreamChat sends a prompt to the stream chat client and returns the response.
-func (params OAIChatArgs) StreamChat(prompt string, system string) <-chan string{
 
+func (params AnthChatArgs) StreamChat(prompt string, system string) <-chan string {
 	if params.ChatArgs.Messages == nil {
 		params.ChatArgs.Messages = make([]types.Message, 0)
 	}

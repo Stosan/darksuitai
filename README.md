@@ -64,8 +64,9 @@ import (
 
 func main() {
 
-	os.Setenv("OPENAI_API_KEY", "YOUR_API_KEY")
-    os.Setenv("ANTHROPIC_API_KEY", "YOUR_API_KEY") // anthropic API key
+	if err := godotenv.Load(".env"); err != nil {
+		log.Printf("Warning: error loading .env file: %v", err)
+	}
 
 	args := darksuitai.NewChatLLMArgs()
 
@@ -77,7 +78,7 @@ func main() {
 	if err != nil{
 		// handle the error as you wish
 	}
-	resp,err:=llm.Chat("hello from earth🌍, what is your name?")
+	resp,err:=llm.Chat("hello, Sam Ayo from earth🌍. What is your name?")
 	if err != nil{
 		// handle the error as you wish
 	}

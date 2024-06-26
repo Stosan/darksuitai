@@ -1,4 +1,4 @@
-package openai
+package anthropic
 
 import (
 	"bufio"
@@ -16,7 +16,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Stosan/darksuitai/internal/llms/openai/types"
+	"github.com/Stosan/darksuitai/internal/llms/anthropic/types"
+	"github.com/joho/godotenv"
 )
 
 // RateLimiter is a simple rate limiter implementation
@@ -60,6 +61,13 @@ var httpClient = &http.Client{
 	Timeout:   0, // No timeout for streaming; use context for control
 }
 
+func init() {
+	// Load environment variables once during initialization
+	if err := godotenv.Load(".env"); err != nil {
+		panic(fmt.Sprintf("error loading .env file: %v", err))
+	}
+}
+
 func retryRequest(client *http.Client, req *http.Request) (*http.Response, error) {
 	var resp *http.Response
 	var err error
@@ -84,18 +92,17 @@ func calculateRetryTimeout(retryCount int) time.Duration {
 	return time.Duration(jitter) * time.Second
 }
 
-
 func checkEnvVar() {
 	// Check for the required environment variable
-	openaiAPIKey := os.Getenv("OPENAI_API_KEY")
-	if openaiAPIKey == "" {
+	anthropicAPIKey := os.Getenv("ANTHROPIC_API_KEY")
+	if anthropicAPIKey == "" {
 		log.Fatal(`
-OPENAI_API_KEY is not set or is empty. 
+ANTHROPIC_API_KEY is not set or is empty. 
 Please set it in the .env file as follows:
 
-    OPENAI_API_KEY="your_openai_api_key_here"
+    ANTHROPIC_API_KEY="your_anthropic_api_key_here"
 
-Make sure to replace "your_openai_api_key_here" with your actual OpenAI API key.
+Make sure to replace "your_anthropic_api_key_here" with your actual Anthropic API key.
 If you don't have a .env file, create one in the root directory of your project.
 `)
 	}
@@ -114,14 +121,16 @@ func Client(req types.ChatArgs) (string, error) {
 	}
 
 	// Create a new HTTP request
-	request, err := http.NewRequest("POST", "https://api.openai.com/v1/chat/completions", bytes.NewBuffer([]byte(reqJsonPayload)))
+	request, err := http.NewRequest("POST", "https://api.anthropic.com/v1/messages", bytes.NewBuffer([]byte(reqJsonPayload)))
 	if err != nil {
 		return "", fmt.Errorf("error creating HTTP request: %w", err)
 	}
 
 	// Set request headers
-	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", os.Getenv("OPENAI_API_KEY")))
+	request.Header.Set("x-api-key", os.Getenv("ANTHROPIC_API_KEY"))
 	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("anthropic-version", "2023-06-01")
+	request.Header.Set("anthropic-beta", "messages-2023-12-15")
 
 	// Make the request with retry logic
 	resp, err := retryRequest(httpClient, request)
@@ -172,17 +181,19 @@ func StreamCompleteClient(req types.ChatArgs) (string, error) {
 	}
 
 	// Create a new HTTP request
-	request, err := http.NewRequest("POST", "https://api.openai.com/v1/chat/completions", bytes.NewBuffer([]byte(reqJsonPayload)))
+	request, err := http.NewRequest("POST", "https://api.anthropic.com/v1/messages", bytes.NewBuffer([]byte(reqJsonPayload)))
 	if err != nil {
 		return "", fmt.Errorf("error creating HTTP request: %w", err)
 	}
 
 	// Set request headers
-	request.Header.Set("Accept", "text/event-stream")
 	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Accept", "text/event-stream")
 	request.Header.Set("Cache-Control", "no-cache")
 	request.Header.Set("Connection", "keep-alive")
-	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", os.Getenv("OPENAI_API_KEY")))
+	request.Header.Set("x-api-key", os.Getenv("ANTHROPIC_API_KEY"))
+	request.Header.Set("anthropic-version", "2023-06-01")
+	request.Header.Set("anthropic-beta", "messages-2023-12-15")
 
 	// Make the request
 	resp, err := retryRequest(httpClient, request)
@@ -190,14 +201,18 @@ func StreamCompleteClient(req types.ChatArgs) (string, error) {
 		return "", fmt.Errorf("error making HTTP request: %w", err)
 	}
 	defer resp.Body.Close()
-
 	if resp.StatusCode == 400 {
 		// Read the response body
 		bodyBytes, err := io.ReadAll(resp.Body)
 		if err != nil {
 			return "", fmt.Errorf("error reading response body: %w", err)
 		}
-		return string(bodyBytes), nil
+
+		// Convert the response body to a string
+		bodyString := string(bodyBytes)
+
+		// Print the response body
+		fmt.Println(bodyString)
 	}
 	// Check if the response status indicates an error
 	if resp.StatusCode >= 400 {
@@ -212,31 +227,34 @@ func StreamCompleteClient(req types.ChatArgs) (string, error) {
 	result := []string{}
 
 	for scanner.Scan() {
-
 		line := scanner.Bytes()
-
 		if bytes.HasPrefix(line, []byte(`event: message_stop)`)) {
 			break
 		}
-
 		if bytes.HasPrefix(line, []byte(`data: `)) {
-
 			data := bytes.TrimPrefix(line, []byte(`data: `))
-
-			if bytes.Contains(data, []byte(`[DONE]`)) {
-				break
-			}
-			var chunk types.ChatCompletionChunk
+			var chunk types.ContentBlockDelta
 			if err := json.Unmarshal(data, &chunk); err != nil {
-				return "", err
+				result = append(result, err.Error())
 			}
-
-			result = append(result, chunk.Choices[0].Delta.Content)
+			if chunk.Type == "ping" {
+				continue
+			}
+			if chunk.Type == "content_block_start" {
+				continue
+			}
+			if chunk.Type == "content_block_delta" {
+				result = append(result, chunk.Delta["text"])
+			}
+		} else if bytes.HasPrefix(line, []byte(`event: error)`)) {
+			data := bytes.TrimPrefix(line, []byte(`data: `))
+			var chunk types.ChatOverloadError
+			if err := json.Unmarshal(data, &chunk); err != nil {
+				result = append(result, err.Error())
+			}
 		}
-
 	}
 	finalResult := strings.Join(result, "")
-
 	return finalResult, nil
 }
 
@@ -249,17 +267,19 @@ func StreamClient(req types.ChatArgs, chunkchan chan string) error {
 	}
 
 	// Create a new HTTP request
-	request, err := http.NewRequest("POST", "https://api.openai.com/v1/chat/completions", bytes.NewBuffer([]byte(reqJsonPayload)))
+	request, err := http.NewRequest("POST", "https://api.anthropic.com/v1/messages", bytes.NewBuffer([]byte(reqJsonPayload)))
 	if err != nil {
 		return err
 	}
 
 	// Set request headers
-	request.Header.Set("Accept", "text/event-stream")
 	request.Header.Set("Content-Type", "application/json")
+	request.Header.Set("Accept", "text/event-stream")
 	request.Header.Set("Cache-Control", "no-cache")
 	request.Header.Set("Connection", "keep-alive")
-	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", os.Getenv("OPENAI_API_KEY")))
+	request.Header.Set("x-api-key", os.Getenv("ANTHROPIC_API_KEY"))
+	request.Header.Set("anthropic-version", "2023-06-01")
+	request.Header.Set("anthropic-beta", "messages-2023-12-15")
 
 	// Make the request
 	resp, err := retryRequest(httpClient, request)
@@ -267,7 +287,6 @@ func StreamClient(req types.ChatArgs, chunkchan chan string) error {
 		return err
 	}
 	defer resp.Body.Close()
-
 	if resp.StatusCode == 400 {
 		// Read the response body
 		bodyBytes, err := io.ReadAll(resp.Body)
@@ -275,7 +294,11 @@ func StreamClient(req types.ChatArgs, chunkchan chan string) error {
 			return err
 		}
 
-		chunkchan <- string(bodyBytes)
+		// Convert the response body to a string
+		bodyString := string(bodyBytes)
+
+		// Print the response body
+		fmt.Println(bodyString)
 	}
 	// Check if the response status indicates an error
 	if resp.StatusCode >= 400 {
@@ -283,34 +306,41 @@ func StreamClient(req types.ChatArgs, chunkchan chan string) error {
 		if err := json.NewDecoder(resp.Body).Decode(&clientErr); err != nil {
 			return err
 		}
-		return fmt.Errorf(clientErr.Error.Message)
+
+		chunkchan <- clientErr.Error.Message
+
 	}
 	// Use a scanner to read the streaming response
 	scanner := bufio.NewScanner(resp.Body)
 
 	for scanner.Scan() {
-
 		line := scanner.Bytes()
-
 		if bytes.HasPrefix(line, []byte(`event: message_stop)`)) {
 			break
 		}
-
 		if bytes.HasPrefix(line, []byte(`data: `)) {
-
 			data := bytes.TrimPrefix(line, []byte(`data: `))
-
-			if bytes.Contains(data, []byte(`[DONE]`)) {
-				break
-			}
-			var chunk types.ChatCompletionChunk
+			var chunk types.ContentBlockDelta
 			if err := json.Unmarshal(data, &chunk); err != nil {
-				return err
+				chunkchan <-  err.Error()
 			}
-			chunkchan <- chunk.Choices[0].Delta.Content
+			if chunk.Type == "ping" {
+				continue
+			}
+			if chunk.Type == "content_block_start" {
+				continue
+			}
+			if chunk.Type == "content_block_delta" {
+				chunkchan <- chunk.Delta["text"]
 
+			}
+		} else if bytes.HasPrefix(line, []byte(`event: error)`)) {
+			data := bytes.TrimPrefix(line, []byte(`data: `))
+			var chunk types.ChatOverloadError
+			if err := json.Unmarshal(data, &chunk); err != nil {
+				chunkchan <-  err.Error()
+			}
 		}
-
 	}
 	// Close the channel after sending all words
 	defer close(chunkchan)
